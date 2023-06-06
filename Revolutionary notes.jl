@@ -29,12 +29,49 @@ end
 
 # ╔═╡ 2698b795-50b1-4dfd-8efe-1e8d3f787870
 begin
-	df = CSV.read("E:\\IIT DELHI\\OneDrive - IIT Delhi\\Work\\NWU research project\\student_answers.csv", DataFrame)
-	DF = CSV.read("E:\\IIT DELHI\\OneDrive - IIT Delhi\\Work\\NWU research project\\IAP_sketch_data.csv", DataFrame)
+	df = CSV.read("student_answers_W2023.csv", DataFrame)
+	DF = CSV.read("IAP_sketch_data.csv", DataFrame)
+	df.timestamp = strip.(df.timestamp)
+	sort!(DF, [:uid, :timestamp])
+	# sy_data_1,sy_data_2=build_sy_dataset(df,DF)
 end
 
 # ╔═╡ 0584d086-883d-49bf-b1e3-b01e0ba33a12
-@bind selected_student Select(collect(6:108))
+@bind selected_student Select(unique(df.uid))
+
+# ╔═╡ 147d7b23-2dfc-4ed3-8b4b-1e6b76e7a367
+begin
+	function build_sy_dataset(df,DF)
+		sy_data_1=[[] for i in 1:108]
+		sy_data_2=[[] for i in 1:108]
+		for student in unique(df.uid)
+			student_row = df[df.uid .== selected_student, :]
+			sorted_data = filter(row -> row.uid == selected_student, DF)
+			end_timestamp = student_row[student_row.q_id .== 110, :].timestamp[1]
+			animation_data = filter(row -> row.timestamp <= end_timestamp, sorted_data)
+			x = animation_data.xcor
+			y = animation_data.ycor
+			sy=zeros(maximum(animation_data.xcor)-minimum(animation_data.xcor)+1)
+			for i in 1:size(animation_data, 1)
+				sy[x[i]+1]=y[i]
+			end
+			sy_data_1[student]=sy
+			end_timestamp_2 = student_row[student_row.q_id .== 111, :].timestamp[1]
+			animation_data_2 = filter(row -> (end_timestamp <= row.timestamp) && (row.timestamp<= end_timestamp_2), sorted_data)
+			x_2 = animation_data_2.xcor
+			y_2 = animation_data_2.ycor
+			sy_2=deepcopy(sy)
+			for i in 1:size(animation_data_2, 1)
+				sy_2[x_2[i]+1]=y_2[i]
+			end
+			sy_data_2[student]=sy_2
+		end
+	return sy_data_1,sy_data_2
+	end
+end	
+
+# ╔═╡ 31583752-a606-4bc4-a6db-04982192bc88
+sy_data_1,sy_data_2=build_sy_dataset(df,DF)
 
 # ╔═╡ ef94f757-622a-45b5-89cb-d140e54135a4
 	md"""QUESTION-1
@@ -56,65 +93,70 @@ begin
 end
 
 # ╔═╡ ca9c92f6-cb21-4b7a-b6b5-1268ffd97e3b
-Print("Answer to Question-1
+Markdown.parse("""Answer to Question-1
 
-",text_answer_110 )
+$text_answer_110 """)
+
+# ╔═╡ dea7b21e-f7ab-4fdf-8f80-099483f4cf2d
+begin
+	function PLOT(animation_data,sy=zeros(maximum(animation_data.xcor)-minimum(animation_data.xcor)+1))
+		x = animation_data.xcor
+		y = animation_data.ycor
+		xmin = 0
+		xmax = 20
+		ymin = -10
+		ymax = 10
+		sx=collect(xmin:xmax)
+	p=plot(sx,sy,xlims=(xmin, xmax), ylims=(ymin, ymax),     sseriestype = :line,  # Set the seriestype to line
+	    linecolor = :dodgerblue,
+	    linewidth = 5,
+	    background_color = :black,
+			    markershape = :circle,
+	    markercolor = :deepskyblue,
+	    markersize = 5,
+	    markerstrokecolor = :skyblue,
+	legend=false)
+	# Set up the animation
+	anim = @animate for i in 1:size(animation_data, 1)
+	    # Extract the current timestamp
+	    timestamp = animation_data[i, :timestamp]
+	    # Create the plot for the current frame
+		sy[x[i]+1]=y[i]
+	    p = plot(sx,sy, xlims=(xmin, xmax), ylims=(ymin, ymax),    seriestype = :line,  # Set the seriestype to line
+	    linecolor = :dodgerblue,
+	    linewidth = 5,
+	    background_color = :black,
+			    markershape = :circle,
+	    markercolor = :deepskyblue,
+	    markersize = 5,
+	    markerstrokecolor = :skyblue,
+	 legend=false)
+	    title!("Timestamp: $timestamp")
+	
+	    p  # Return the plot for the current frame
+	end
+	
+	# Display the animation
+	return gif(anim),p,sy
+	end
+end
 
 # ╔═╡ 693de731-e00b-4e99-b74a-33583f0f05b8
 begin
-	filtered_data = filter(row -> row.uid == selected_student, DF)
-	
-	# Sort the filtered data by the timestamp
-	sorted_data = sort(filtered_data, :timestamp)
-	
-	# Specify the desired end timestamp for the animation
-	end_timestamp = student_row[student_row.q_id .== 110, :].timestamp[1]
-	animation_data = filter(row -> row.timestamp <= end_timestamp, sorted_data)
-
-	# Set up the animation
-	xmin = minimum(animation_data.xcor)
-	xmax = maximum(animation_data.xcor)
-	ymin = minimum(animation_data.ycor)
-	ymax = maximum(animation_data.ycor)
-	x = animation_data.xcor
-	y = animation_data.ycor
-	vx=collect(xmin:xmax)
-	vy=zeros(xmax-xmin+1)
-plot(vx,vy,xlims=(xmin, xmax), ylims=(ymin, ymax),     sseriestype = :line,  # Set the seriestype to line
-    linecolor = :dodgerblue,
-    linewidth = 5,
-    background_color = :black,
-		    markershape = :circle,
-    markercolor = :deepskyblue,
-    markersize = 5,
-    markerstrokecolor = :skyblue,
-legend=false)
-# Set up the animation
-anim = @animate for i in 1:size(animation_data, 1)
-    # Extract the current timestamp
-    timestamp = animation_data[i, :timestamp]
-    # Create the plot for the current frame
-	vy[x[i]+1]=y[i]
-    p = plot(vx,vy, xlims=(xmin, xmax), ylims=(ymin, ymax),    seriestype = :line,  # Set the seriestype to line
-    linecolor = :dodgerblue,
-    linewidth = 5,
-    background_color = :black,
-		    markershape = :circle,
-    markercolor = :deepskyblue,
-    markersize = 5,
-    markerstrokecolor = :skyblue,
- legend=false)
-    title!("Timestamp: $timestamp")
-
-    p  # Return the plot for the current frame
+			sorted_data = filter(row -> row.uid == selected_student, DF)
+		end_timestamp = student_row[student_row.q_id .== 110, :].timestamp[1]
+		animation_data = filter(row -> row.timestamp <= end_timestamp, sorted_data)
+	anim,p,sy=PLOT(animation_data)
+	anim
 end
 
-# Display the animation
-gif(anim, "animation.gif")
-end
+# ╔═╡ 42e1166c-5662-4950-94a1-05d61777e61b
+p
 
 # ╔═╡ d1fb2a00-d260-4814-90f0-f968b590618c
-Print("The y vector at the end of answer-1 is $vy")
+Markdown.parse("""The y vector at the end of answer-1 is 
+
+$sy """)
 
 # ╔═╡ 1dec5043-a8d1-4a3f-9896-987f19419dc3
 	md"""QUESTION-2
@@ -125,57 +167,25 @@ Print("The y vector at the end of answer-1 is $vy")
 Markdown.parse("""![]($sketch_url_111) """)
 
 # ╔═╡ a52a834b-d8c7-472e-9c82-521324d6259f
-Print("Answer to Question-2
+Markdown.parse("""Answer to Question-2
 
-",text_answer_111)
+$text_answer_111""")
 
 # ╔═╡ 8eab0e7e-4f0c-4d3d-94a0-85ac4a1c39ac
 begin
-
 	end_timestamp_2 = student_row[student_row.q_id .== 111, :].timestamp[1]
 	animation_data_2 = filter(row -> (end_timestamp <= row.timestamp) && (row.timestamp<= end_timestamp_2), sorted_data)
-
-	# Set up the animation
-	xmin_2 = minimum(animation_data_2.xcor)
-	xmax_2 = maximum(animation_data_2.xcor)
-	ymin_2 = minimum(animation_data_2.ycor)
-	ymax_2 = maximum(animation_data_2.ycor)
-	x_2 = animation_data_2.xcor
-	y_2 = animation_data_2.ycor
-	vx_2=collect(xmin:xmax)
-	vy_2=zeros(xmax-xmin+1)
-plot(vx_2,vy_2,xlims=(xmin, xmax), ylims=(ymin, ymax), seriestype = :line,  # Set the seriestype to line
-    linecolor = :dodgerblue,
-    linewidth = 5,
-    background_color = :black,
-		    markershape = :circle,
-    markercolor = :deepskyblue,
-    markersize = 5,
-    markerstrokecolor = :skyblue,legend=false)
-# Set up the animation
-anim_2 = @animate for i in 1:size(animation_data_2, 1)
-    # Extract the current timestamp
-    timestamp_2 = animation_data_2[i, :timestamp]
-	vy_2[x[i]+1]=y[i]
-    p = plot(vx_2,vy_2, xlims=(xmin, xmax), ylims=(ymin, ymax),seriestype = :line,  # Set the seriestype to line
-    linecolor = :dodgerblue,
-    linewidth = 5,
-    background_color = :black,
-		    markershape = :circle,
-    markercolor = :deepskyblue,
-    markersize = 5,
-    markerstrokecolor = :skyblue, legend=false)
-    title!("Timestamp: $timestamp_2")
-
-    p  # Return the plot for the current frame
+	anim_2,p_2,sy_2=PLOT(animation_data_2,sy)
+	anim_2
 end
 
-# Display the animation
-gif(anim_2, "animation.gif")
-end
+# ╔═╡ 94bde2f2-9e85-456b-b99b-df9b14318946
+p_2
 
 # ╔═╡ d1106d9a-360a-444e-bc6b-52270a2df651
-Print("The y vector at the end of answer-2 is $vy_2")
+Markdown.parse("""The y vector at the end of answer-2 is
+
+$sy_2 """)
 
 # ╔═╡ 00000000-0000-0000-0000-000000000001
 PLUTO_PROJECT_TOML_CONTENTS = """
@@ -1772,16 +1782,21 @@ version = "1.4.1+0"
 # ╔═╡ Cell order:
 # ╠═d97072e0-fe1f-11ed-0b09-518a7bb76d24
 # ╠═2698b795-50b1-4dfd-8efe-1e8d3f787870
+# ╠═147d7b23-2dfc-4ed3-8b4b-1e6b76e7a367
+# ╠═31583752-a606-4bc4-a6db-04982192bc88
 # ╠═0584d086-883d-49bf-b1e3-b01e0ba33a12
 # ╠═ef94f757-622a-45b5-89cb-d140e54135a4
 # ╠═809138b2-9c88-4805-9ae1-dd0e0b85dbdf
 # ╠═ca9c92f6-cb21-4b7a-b6b5-1268ffd97e3b
+# ╠═dea7b21e-f7ab-4fdf-8f80-099483f4cf2d
 # ╠═693de731-e00b-4e99-b74a-33583f0f05b8
+# ╠═42e1166c-5662-4950-94a1-05d61777e61b
 # ╠═d1fb2a00-d260-4814-90f0-f968b590618c
 # ╠═1dec5043-a8d1-4a3f-9896-987f19419dc3
 # ╠═8a60bd52-02a6-41c5-8d4c-829f5e83957a
 # ╠═a52a834b-d8c7-472e-9c82-521324d6259f
 # ╠═8eab0e7e-4f0c-4d3d-94a0-85ac4a1c39ac
+# ╠═94bde2f2-9e85-456b-b99b-df9b14318946
 # ╠═d1106d9a-360a-444e-bc6b-52270a2df651
 # ╟─00000000-0000-0000-0000-000000000001
 # ╟─00000000-0000-0000-0000-000000000002
