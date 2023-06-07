@@ -27,12 +27,31 @@ begin
 	using Plots
 end
 
+# ╔═╡ 34b968b6-5e76-4ebc-86a1-56c22e91bde6
+@bind t Clock()
+
+# ╔═╡ d7362d6b-0578-4f7e-9843-31713a51f79a
+t
+
+# ╔═╡ a0b86ac4-ff49-4ba7-a2ef-9cc0a21de4be
+function plot_sketch_at_time_t(t)
+	# plots the correct row of the animation data given the time t	
+	if t > 20 # change to max_timestamp
+		t = 20 # change to max_timestamp
+	end
+	plot(0:t, [t ^ 2 for t in 0:t])	
+end
+
+# ╔═╡ ff8e7dd9-0242-409a-86ac-b833584aeceb
+plot_sketch_at_time_t(t)
+
 # ╔═╡ 8e033519-c177-4534-adbf-1024387eaae2
 md"""
 Some general comments:
 
 - Move all the functions and data processing to cells at the bottom of the notebook. I want to be able to open the notebook, select a student, and then see their sketches and answers one after another without code and stuff in between
-- The gifs skip forward in time because the time series data only records when they changed a point. This makes watching the gif 
+- The gifs skip forward in time because the time series data only records when they changed a point. Use a clock widget to plot the row of the timeseries at the current time. 
+
 """
 
 # ╔═╡ 2698b795-50b1-4dfd-8efe-1e8d3f787870
@@ -94,7 +113,7 @@ begin # {{{ You don't need begin and end here since the only thing in the cell i
 end	
 
 # ╔═╡ 31583752-a606-4bc4-a6db-04982192bc88
-sy_data_1 , sy_data_2 = build_sy_dataset(df,DF)
+sy_data_1 , sy_data_2 = build_sy_dataset(df, DF)
 
 # ╔═╡ ef94f757-622a-45b5-89cb-d140e54135a4
 	md"""
@@ -238,7 +257,7 @@ md"""
 ## Functions and data processing
 """
 
-# ╔═╡ 2f60312c-3914-4de3-9adc-4f422f84c782
+# ╔═╡ ec1dd30b-20f8-4435-81d1-442e67799a4d
 
 
 # ╔═╡ 00000000-0000-0000-0000-000000000001
@@ -1949,6 +1968,10 @@ version = "1.4.1+0"
 
 # ╔═╡ Cell order:
 # ╠═d97072e0-fe1f-11ed-0b09-518a7bb76d24
+# ╠═34b968b6-5e76-4ebc-86a1-56c22e91bde6
+# ╠═d7362d6b-0578-4f7e-9843-31713a51f79a
+# ╠═ff8e7dd9-0242-409a-86ac-b833584aeceb
+# ╠═a0b86ac4-ff49-4ba7-a2ef-9cc0a21de4be
 # ╠═8e033519-c177-4534-adbf-1024387eaae2
 # ╠═2698b795-50b1-4dfd-8efe-1e8d3f787870
 # ╠═147d7b23-2dfc-4ed3-8b4b-1e6b76e7a367
@@ -1970,6 +1993,6 @@ version = "1.4.1+0"
 # ╠═94bde2f2-9e85-456b-b99b-df9b14318946
 # ╠═d1106d9a-360a-444e-bc6b-52270a2df651
 # ╟─065df6ae-57e6-4eaf-9397-1ba5d37b4acc
-# ╠═2f60312c-3914-4de3-9adc-4f422f84c782
+# ╠═ec1dd30b-20f8-4435-81d1-442e67799a4d
 # ╟─00000000-0000-0000-0000-000000000001
 # ╟─00000000-0000-0000-0000-000000000002
