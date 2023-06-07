@@ -27,8 +27,17 @@ begin
 	using Plots
 end
 
+# ╔═╡ 8e033519-c177-4534-adbf-1024387eaae2
+md"""
+Some general comments:
+
+- Move all the functions and data processing to cells at the bottom of the notebook. I want to be able to open the notebook, select a student, and then see their sketches and answers one after another without code and stuff in between
+- The gifs skip forward in time because the time series data only records when they changed a point. This makes watching the gif 
+"""
+
 # ╔═╡ 2698b795-50b1-4dfd-8efe-1e8d3f787870
 begin
+	# {{{ give df and DF better names. Maybe s_df (for sketch df) and a_df (For answers df) }}}
 	df = CSV.read("student_answers_W2023.csv", DataFrame)
 	DF = CSV.read("IAP_sketch_data.csv", DataFrame)
 	df.timestamp = strip.(df.timestamp)
@@ -36,26 +45,40 @@ begin
 	# sy_data_1,sy_data_2=build_sy_dataset(df,DF)
 end
 
+# ╔═╡ 2934ac36-3cb3-4b9f-b606-312f1b5a0c94
+
+
 # ╔═╡ 0584d086-883d-49bf-b1e3-b01e0ba33a12
 @bind selected_student Select(unique(df.uid))
 
 # ╔═╡ 147d7b23-2dfc-4ed3-8b4b-1e6b76e7a367
-begin
+begin # {{{ You don't need begin and end here since the only thing in the cell is this function }}}
+
+	# {{{ Add a comment explaining what the function does. Look here for how to write documentation for a function: https://docs.julialang.org/en/v1/manual/documentation/	}}}
 	function build_sy_dataset(df,DF)
+		
 		sy_data_1=[[] for i in 1:108]
 		sy_data_2=[[] for i in 1:108]
 		for student in unique(df.uid)
-			student_row = df[df.uid .== selected_student, :]
-			sorted_data = filter(row -> row.uid == selected_student, DF)
+			
+			student_row = df[df.uid .== selected_student, :] # {{{ call this student_answers or something like that }}}
+			sorted_data = filter(row -> row.uid == selected_student, DF) # {{{ call this sketch_data }}}					
 			end_timestamp = student_row[student_row.q_id .== 110, :].timestamp[1]
-			animation_data = filter(row -> row.timestamp <= end_timestamp, sorted_data)
+			
+			# {{{ Everything from here until sy_data_1[student]=sy is repeated in the next chunk of code. Abstract into its own function and call it twice }}}
+			animation_data = filter(row -> row.timestamp <= end_timestamp, sorted_data) # {{call this animation_data_1}}
+
+			# {{{ Add some comments explaining your code better. I can figure it out, but it takes some trying }}}
 			x = animation_data.xcor
 			y = animation_data.ycor
-			sy=zeros(maximum(animation_data.xcor)-minimum(animation_data.xcor)+1)
+			sy=zeros(maximum(animation_data.xcor)-minimum(animation_data.xcor)+1) # {{{ name this something that indicates it is the final sketch, maybe final_sketch }}}
+
+			# {{{ Make sure to comment this. It took me a few minutes to figure out what it was doing  }}}
 			for i in 1:size(animation_data, 1)
-				sy[x[i]+1]=y[i]
+				sy[x[i]+1]=y[i] # {{{ I'm confused why you need +1 here }}}
 			end
 			sy_data_1[student]=sy
+			
 			end_timestamp_2 = student_row[student_row.q_id .== 111, :].timestamp[1]
 			animation_data_2 = filter(row -> (end_timestamp <= row.timestamp) && (row.timestamp<= end_timestamp_2), sorted_data)
 			x_2 = animation_data_2.xcor
@@ -67,39 +90,45 @@ begin
 			sy_data_2[student]=sy_2
 		end
 	return sy_data_1,sy_data_2
-	end
+	end	
 end	
 
 # ╔═╡ 31583752-a606-4bc4-a6db-04982192bc88
-sy_data_1,sy_data_2=build_sy_dataset(df,DF)
+sy_data_1 , sy_data_2 = build_sy_dataset(df,DF)
 
 # ╔═╡ ef94f757-622a-45b5-89cb-d140e54135a4
-	md"""QUESTION-1
+	md"""
+	#### QUESTION 1
 	
 	First, construct a spring potential like that on the previous page (parabola). When you have one you like, click the `export-sketch` button and upload your sketch here (you can drag a file onto the "choose file" button or click it and find the file).
 	
 	Make some observations about how the atoms behaves in this potential. Which features does the spring model have that fits atomic hypothesis? What is it missing? Would this be a good model for simulating atomic bonding?"""
 
 # ╔═╡ 809138b2-9c88-4805-9ae1-dd0e0b85dbdf
-begin
-	
+begin	
 	student_row = df[df.uid .== selected_student, :]
 	sketch_url_110 = student_row[student_row.q_id .== 110, :].sketch_url[1];
 	sketch_url_111 = student_row[student_row.q_id .== 111, :].sketch_url[1];
 	text_answer_111 = student_row[student_row.q_id .== 111, :].text_answer[1];
 	text_answer_110 = student_row[student_row.q_id .== 110, :].text_answer[1];
-	Markdown.parse("""![]($sketch_url_110) """)
+	# {{{ I learned you can do this with Resource as below, so use that instead. You can use Resource inside md as well. (strip is just to remove some spaces at the beginning and end of the url. We should probably do that in pre-processing) }}}
+	# Markdown.parse("""![]($sketch_url_110) """)
+	Resource(strip(sketch_url_111), :width => 500)
+	
 	
 end
 
 # ╔═╡ ca9c92f6-cb21-4b7a-b6b5-1268ffd97e3b
-Markdown.parse("""Answer to Question-1
+# {{{This answer is not rendering correctly. Like with student 6, the \r\n gets displayed instead of starting a new line"
+Markdown.parse("""
+**Answer to Question 1**
 
 $text_answer_110 """)
 
 # ╔═╡ dea7b21e-f7ab-4fdf-8f80-099483f4cf2d
 begin
-	function PLOT(animation_data,sy=zeros(maximum(animation_data.xcor)-minimum(animation_data.xcor)+1))
+	# {{{ Add a comment explaining what the function does. Name it something more informative than PLOT. Also, I think don't give a default to sy here. }}}
+	function PLOT(animation_data, sy=zeros(maximum(animation_data.xcor)-minimum(animation_data.xcor)+1))
 		x = animation_data.xcor
 		y = animation_data.ycor
 		xmin = 0
@@ -107,36 +136,48 @@ begin
 		ymin = -10
 		ymax = 10
 		sx=collect(xmin:xmax)
-	p=plot(sx,sy,xlims=(xmin, xmax), ylims=(ymin, ymax),     sseriestype = :line,  # Set the seriestype to line
-	    linecolor = :dodgerblue,
-	    linewidth = 5,
-	    background_color = :black,
-			    markershape = :circle,
-	    markercolor = :deepskyblue,
-	    markersize = 5,
-	    markerstrokecolor = :skyblue,
-	legend=false)
+
+	# {{{ I reformatted a how I want you to format multi-line function calls so they are easier to read }}}
+	p=plot(sx, sy,
+			lims=(xmin, xmax), 
+			ylims=(ymin, ymax),     
+			sseriestype = :line,  # Set the seriestype to line
+			linecolor = :dodgerblue,
+			linewidth = 5,
+	    	background_color = :black,
+			markershape = :circle,
+	    	markercolor = :deepskyblue,
+	    	markersize = 5,
+	    	markerstrokecolor = :skyblue,
+			legend=false)
+		
 	# Set up the animation
 	anim = @animate for i in 1:size(animation_data, 1)
 	    # Extract the current timestamp
 	    timestamp = animation_data[i, :timestamp]
 	    # Create the plot for the current frame
 		sy[x[i]+1]=y[i]
-	    p = plot(sx,sy, xlims=(xmin, xmax), ylims=(ymin, ymax),    seriestype = :line,  # Set the seriestype to line
-	    linecolor = :dodgerblue,
-	    linewidth = 5,
-	    background_color = :black,
+	    p = plot(sx, sy, 
+				xlims=(xmin, xmax), 
+				ylims=(ymin, ymax),    
+				seriestype = :line,  # Set the seriestype to line
+	    		linecolor = :dodgerblue,
+	    		linewidth = 5,
+	    		background_color = :black,
 			    markershape = :circle,
-	    markercolor = :deepskyblue,
-	    markersize = 5,
-	    markerstrokecolor = :skyblue,
-	 legend=false)
+	    		markercolor = :deepskyblue,
+	    		markersize = 5,
+	    		markerstrokecolor = :skyblue,
+	 			legend=false)
+		
 	    title!("Timestamp: $timestamp")
-	
+
+		# {{{ Having p here doesn't do anything I don't think}}}
 	    p  # Return the plot for the current frame
 	end
-	
-	# Display the animation
+
+		
+	# Display the animation  {{{ I think just return the anim and then call gif outside the function }}}
 	return gif(anim),p,sy
 	end
 end
@@ -159,12 +200,17 @@ Markdown.parse("""The y vector at the end of answer-1 is
 $sy """)
 
 # ╔═╡ 1dec5043-a8d1-4a3f-9896-987f19419dc3
-	md"""QUESTION-2
+	md"""
+	#### QUESTION-2
 	
 	Now, construct an interatomic potential that more accurately models the atomic hypothesis. When you have one you like, click the `export-sketch` button and upload your sketch here. Explain what the main difference is between your new potential and the spring potential? Make some observations about the atomic pair in this potential."""
 
 # ╔═╡ 8a60bd52-02a6-41c5-8d4c-829f5e83957a
 Markdown.parse("""![]($sketch_url_111) """)
+
+# ╔═╡ af48cbca-19f3-4afd-96ca-86a341dba5bb
+
+
 
 # ╔═╡ a52a834b-d8c7-472e-9c82-521324d6259f
 Markdown.parse("""Answer to Question-2
@@ -186,6 +232,14 @@ p_2
 Markdown.parse("""The y vector at the end of answer-2 is
 
 $sy_2 """)
+
+# ╔═╡ 065df6ae-57e6-4eaf-9397-1ba5d37b4acc
+md"""
+## Functions and data processing
+"""
+
+# ╔═╡ 2f60312c-3914-4de3-9adc-4f422f84c782
+
 
 # ╔═╡ 00000000-0000-0000-0000-000000000001
 PLUTO_PROJECT_TOML_CONTENTS = """
@@ -1895,11 +1949,13 @@ version = "1.4.1+0"
 
 # ╔═╡ Cell order:
 # ╠═d97072e0-fe1f-11ed-0b09-518a7bb76d24
+# ╠═8e033519-c177-4534-adbf-1024387eaae2
 # ╠═2698b795-50b1-4dfd-8efe-1e8d3f787870
 # ╠═147d7b23-2dfc-4ed3-8b4b-1e6b76e7a367
 # ╠═31583752-a606-4bc4-a6db-04982192bc88
+# ╠═2934ac36-3cb3-4b9f-b606-312f1b5a0c94
 # ╠═0584d086-883d-49bf-b1e3-b01e0ba33a12
-# ╠═ef94f757-622a-45b5-89cb-d140e54135a4
+# ╟─ef94f757-622a-45b5-89cb-d140e54135a4
 # ╠═809138b2-9c88-4805-9ae1-dd0e0b85dbdf
 # ╠═ca9c92f6-cb21-4b7a-b6b5-1268ffd97e3b
 # ╠═dea7b21e-f7ab-4fdf-8f80-099483f4cf2d
@@ -1908,9 +1964,12 @@ version = "1.4.1+0"
 # ╠═d1fb2a00-d260-4814-90f0-f968b590618c
 # ╠═1dec5043-a8d1-4a3f-9896-987f19419dc3
 # ╠═8a60bd52-02a6-41c5-8d4c-829f5e83957a
+# ╠═af48cbca-19f3-4afd-96ca-86a341dba5bb
 # ╠═a52a834b-d8c7-472e-9c82-521324d6259f
 # ╠═8eab0e7e-4f0c-4d3d-94a0-85ac4a1c39ac
 # ╠═94bde2f2-9e85-456b-b99b-df9b14318946
 # ╠═d1106d9a-360a-444e-bc6b-52270a2df651
+# ╟─065df6ae-57e6-4eaf-9397-1ba5d37b4acc
+# ╠═2f60312c-3914-4de3-9adc-4f422f84c782
 # ╟─00000000-0000-0000-0000-000000000001
 # ╟─00000000-0000-0000-0000-000000000002
