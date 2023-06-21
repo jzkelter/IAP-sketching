@@ -27,10 +27,10 @@ begin
 end
 
 # ╔═╡ 34b968b6-5e76-4ebc-86a1-56c22e91bde6
-@bind t Clock()
+
 
 # ╔═╡ d7362d6b-0578-4f7e-9843-31713a51f79a
-t
+# t
 
 # ╔═╡ a0b86ac4-ff49-4ba7-a2ef-9cc0a21de4be
 function plot_sketch_at_time_t(t)
@@ -40,9 +40,6 @@ function plot_sketch_at_time_t(t)
 	end
 	plot(0:t, [t ^ 2 for t in 0:t])	
 end
-
-# ╔═╡ ff8e7dd9-0242-409a-86ac-b833584aeceb
-plot_sketch_at_time_t(t)
 
 # ╔═╡ 8e033519-c177-4534-adbf-1024387eaae2
 md"""
@@ -66,6 +63,15 @@ md"""**Answer to Question 1**
 
 """
 
+# ╔═╡ 8e014f62-a1ae-4697-b83c-7fc0c91a0ff6
+@bind t Clock()
+
+# ╔═╡ ff8e7dd9-0242-409a-86ac-b833584aeceb
+plot_sketch_at_time_t(t)
+
+# ╔═╡ 2e461501-7cc1-4531-b073-d98c068a4f26
+t
+
 # ╔═╡ 4a243ea6-2027-4d43-a541-8b154889840b
 md"""**Plot after answer 1**
 
@@ -82,15 +88,38 @@ md"""**Answer to Question 2**
 
 """
 
+# ╔═╡ 8eab0e7e-4f0c-4d3d-94a0-85ac4a1c39ac
+# gif(anim_2)
+p_2
+
 # ╔═╡ c46b5066-8128-4dc1-a71a-45973261aa82
 md"""**Final plot after answer 2**
 
 """
 
+# ╔═╡ 94bde2f2-9e85-456b-b99b-df9b14318946
+p_2
+
+# ╔═╡ d1106d9a-360a-444e-bc6b-52270a2df651
+Markdown.parse("""The y vector at the end of answer-2 is
+
+$sketch_2_vector """)
+
 # ╔═╡ 065df6ae-57e6-4eaf-9397-1ba5d37b4acc
 md"""
 ## Functions and data processing
 """
+
+# ╔═╡ cb2f8407-c2a5-4b51-8036-5ea9094b467f
+function format_timestamp_data(timestamp_data)
+    formatted_timestamp_data = []
+    for timestamp in timestamp_data
+		timestamp=timestamp[1:23]
+		# format_dt(timestamp) = DateTime(replace(timestamp, "+00:00" => ""), DateFormat("yyyy-mm-dd HH:MM:SS.ssss"))
+        push!(formatted_timestamp_data, timestamp)
+    end
+    return formatted_timestamp_data
+end
 
 # ╔═╡ d0c7bd76-ae05-48ad-a76b-ecf2737143da
 begin
@@ -98,6 +127,10 @@ begin
 	s_df = CSV.read("IAP_sketch_data.csv", DataFrame) #sketch dataframe
 	a_df.timestamp = strip.(a_df.timestamp)
 	sort!(s_df, [:uid, :timestamp])
+	a_df = filter(row -> row.timestamp >= "2023-01-01 00:00:00.000000+00:00", a_df)
+	s_df = filter(row -> row.timestamp >= "2023-01-01 00:00:00.000000+00:00", s_df)
+	s_df.timestamp = format_timestamp_data(s_df.timestamp)	
+	a_df.timestamp = format_timestamp_data(a_df.timestamp)	
 end
 
 # ╔═╡ 0584d086-883d-49bf-b1e3-b01e0ba33a12
@@ -144,10 +177,62 @@ function build_sy_dataset(a_df,s_df)
 	return sy_data_1 , sy_data_2
 end	
 
+# ╔═╡ 78fb36c4-43e6-441c-a2b5-53c8d0f6f040
+
+
+# ╔═╡ bb252b8f-aa11-4567-8f09-fd6c9e6f76ff
+begin	
+	student_answers = a_df[a_df.uid .== selected_student, :]    #filtered answer data frame containing the entries of the selected student
+	sketch_url_110 = student_answers[student_answers.q_id .== 110, :].sketch_url[1]; #url for Q1
+	sketch_url_111 = student_answers[student_answers.q_id .== 111, :].sketch_url[1]; #url for Q2
+	text_answer_110 = student_answers[student_answers.q_id .== 110, :].text_answer[1]; #ans for Q1
+	text_answer_111 = student_answers[student_answers.q_id .== 111, :].text_answer[1]; #ans for Q2
+	sketch_data = filter(row -> row.uid == selected_student, s_df) #filtered sketch data frame containing the entries of the selected student
+	end_timestamp_1 = student_answers[student_answers.q_id .== 110, :].timestamp[1] 
+	animation_data_1 = filter(row -> row.timestamp <= end_timestamp_1, sketch_data)
+	const next_timestamp_index = Ref(1)
+	p,sketch_1_vector=build_animation(animation_data_1,t)
+	end_timestamp_2 = student_answers[student_answers.q_id .== 111, :].timestamp[1]
+	animation_data_2 = filter(row -> (end_timestamp_1 <= row.timestamp) && (row.timestamp<= end_timestamp_2), sketch_data)
+	# p_2,sketch_2_vector=build_animation(animation_data_2,t,sketch_1_vector)
+	sy_data_1 , sy_data_2 = build_sy_dataset(a_df, s_df)  #building the dataset containing the final y-vectors after Q1 and Q2 for each student
+end
+
+# ╔═╡ 809138b2-9c88-4805-9ae1-dd0e0b85dbdf
+Resource(strip(sketch_url_110), :width => 500)
+
+# ╔═╡ 105af7a9-3779-4773-a78d-baa0ecdf116c
+begin
+	HTML(replace(text_answer_110, "\\r\\n" => "<br>"))
+end
+
+# ╔═╡ 693de731-e00b-4e99-b74a-33583f0f05b8
+# gif(anim)
+p
+
+# ╔═╡ 42e1166c-5662-4950-94a1-05d61777e61b
+p
+
+# ╔═╡ d1fb2a00-d260-4814-90f0-f968b590618c
+Markdown.parse("""The y vector at the end of answer-1 is 
+
+$sketch_1_vector """)
+
+# ╔═╡ 8a60bd52-02a6-41c5-8d4c-829f5e83957a
+Resource(strip(sketch_url_111), :width => 500)
+
+# ╔═╡ a52a834b-d8c7-472e-9c82-521324d6259f
+begin
+	HTML(replace(text_answer_111, "\\r\\n" => "<br>"))
+end
+
+# ╔═╡ a40b5024-f7f1-492f-87b0-9f4940b6fb70
+
+
 # ╔═╡ 8deb8c04-6e10-4f84-9f61-443c7a9bcb27
 begin
 	# A function which takes the animation data frame and the optional initial y_vector(if no vector is given in input then it takes the default zero values) for the respective Question(1 or 2) and builds an animation of plot vs timestamp and returns the animation, final plot, final y vector
-	function build_animation(animation_data, current_sketch_y_vector=zeros(22))
+	function build_animation(animation_data,t, current_sketch_y_vector=zeros(22))
 		x = animation_data.xcor #a vector containing the x coordinates from the animation_data which were recorded within the timestamp range for the respective Questions, similar for y
 		y = animation_data.ycor
 		xmin = 0     #defining the range of x and y values for the plot
@@ -169,13 +254,27 @@ begin
 	    	markersize = 5,
 	    	markerstrokecolor = :skyblue,
 			legend=false)
-		
+	begin_timestamp=animation_data[1,:timestamp]
+	end_timestamp=animation_data[size(animation_data,1),:timestamp]
+	
+
+		# temp=1
+		# println(format_dt(begin_timestamp))
+		# println(format_dt(end_timestamp))
 	# Set up the animation
-	anim = @animate for i in 1:size(animation_data, 1)  			#running a loop in the range from 1 to the size of animation_data across dimension 1(which means the number of rows, hence the number of changes in coordintes within the timestamp range)
+	# anim = @animate while format_dt(begin_timestamp)+Dates.Millisecond(temp*100)<=format_dt(begin_timestamp)+Dates.Millisecond(2000)	#running a loop in the range from 1 to the size of animation_data across dimension 1(which means the number of rows, hence the number of changes in coordintes within the timestamp range)
 	    # Extract the current timestamp
-	    timestamp = animation_data[i, :timestamp]
+		println(next_timestamp_index[])
+			if (format_dt(begin_timestamp)+Dates.Millisecond(t-1)<=format_dt(end_timestamp))
+			println(format_dt(begin_timestamp)+Dates.Millisecond(t-1))
+			println(format_dt(animation_data[next_timestamp_index, 	:timestamp]))
+		if format_dt(begin_timestamp)+Dates.Millisecond(t-1)==format_dt(animation_data[next_timestamp_index, 	:timestamp])
+			println("hello")
+			current_sketch_y_vector[x[next_timestamp_index+1]=y[next_timestamp_index]
+			next_timestamp_index=next_timestamp_index+1
+		end
 			#updating the current vector at the (x_i+1)th position(indexing in list starts from 1 but x axis starts from 0 so there is a +1) with the y_ith value in the ith iteration(i_th row of the animation_data table)
-			current_sketch_y_vector[x[i]+1]=y[i]
+			
 			p = plot(current_sketch_x_vector, current_sketch_y_vector, 
 					xlims=(xmin, xmax), 
 					ylims=(ymin, ymax),    
@@ -189,79 +288,38 @@ begin
 					markerstrokecolor = :skyblue,
 					legend=false)
 			
-			title!("Timestamp: $timestamp")
+			title!("Timestamp: $(format_dt(begin_timestamp)+Dates.Millisecond(t))")
+		# temp=temp+1
+		end
+	# end
+	# anim = @animate for i in 1:size(animation_data, 1)  			#running a loop in the range from 1 to the size of animation_data across dimension 1(which means the number of rows, hence the number of changes in coordintes within the timestamp range)
+	#     # Extract the current timestamp
+	#     timestamp = animation_data[i, :timestamp]
+	# 		#updating the current vector at the (x_i+1)th position(indexing in list starts from 1 but x axis starts from 0 so there is a +1) with the y_ith value in the ith iteration(i_th row of the animation_data table)
+	# 		current_sketch_y_vector[x[i]+1]=y[i]
+	# 		p = plot(current_sketch_x_vector, current_sketch_y_vector, 
+	# 				xlims=(xmin, xmax), 
+	# 				ylims=(ymin, ymax),    
+	# 				seriestype = :line,  # Set the seriestype to line
+	# 				linecolor = :dodgerblue,
+	# 				linewidth = 5,
+	# 				background_color = :black,
+	# 				markershape = :circle,
+	# 				markercolor = :deepskyblue,
+	# 				markersize = 5,
+	# 				markerstrokecolor = :skyblue,
+	# 				legend=false)
+			
+	# 		title!("Timestamp: $timestamp")
+	# end
+
+	# return anim,p,current_sketch_y_vector
+	return p,current_sketch_y_vector
 	end
-
-	return anim,p,current_sketch_y_vector
-	end
 end
 
-# ╔═╡ bb252b8f-aa11-4567-8f09-fd6c9e6f76ff
-begin	
-	student_answers = a_df[a_df.uid .== selected_student, :]    #filtered answer data frame containing the entries of the selected student
-	sketch_url_110 = student_answers[student_answers.q_id .== 110, :].sketch_url[1]; #url for Q1
-	sketch_url_111 = student_answers[student_answers.q_id .== 111, :].sketch_url[1]; #url for Q2
-	text_answer_110 = student_answers[student_answers.q_id .== 110, :].text_answer[1]; #ans for Q1
-	text_answer_111 = student_answers[student_answers.q_id .== 111, :].text_answer[1]; #ans for Q2
-	sketch_data = filter(row -> row.uid == selected_student, s_df) #filtered sketch data frame containing the entries of the selected student
-	end_timestamp_1 = student_answers[student_answers.q_id .== 110, :].timestamp[1] 
-	animation_data_1 = filter(row -> row.timestamp <= end_timestamp_1, sketch_data)
-	anim,p,sketch_1_vector=build_animation(animation_data_1)
-	end_timestamp_2 = student_answers[student_answers.q_id .== 111, :].timestamp[1]
-	animation_data_2 = filter(row -> (end_timestamp_1 <= row.timestamp) && (row.timestamp<= end_timestamp_2), sketch_data)
-	anim_2,p_2,sketch_2_vector=build_animation(animation_data_2,sketch_1_vector)
-	sy_data_1 , sy_data_2 = build_sy_dataset(a_df, s_df)  #building the dataset containing the final y-vectors after Q1 and Q2 for each student
-end
-
-# ╔═╡ 809138b2-9c88-4805-9ae1-dd0e0b85dbdf
-Resource(strip(sketch_url_110), :width => 500)
-
-# ╔═╡ 105af7a9-3779-4773-a78d-baa0ecdf116c
-begin
-	HTML(replace(text_answer_110, "\\r\\n" => "<br>"))
-end
-
-# ╔═╡ 693de731-e00b-4e99-b74a-33583f0f05b8
-gif(anim)
-
-# ╔═╡ 42e1166c-5662-4950-94a1-05d61777e61b
-p
-
-# ╔═╡ d1fb2a00-d260-4814-90f0-f968b590618c
-Markdown.parse("""The y vector at the end of answer-1 is 
-
-$sketch_1_vector """)
-
-# ╔═╡ 8a60bd52-02a6-41c5-8d4c-829f5e83957a
-Resource(strip(sketch_url_111), :width => 500)
-
-# ╔═╡ a52a834b-d8c7-472e-9c82-521324d6259f
-begin
-	HTML(replace(text_answer_111, "\\r\\n" => "<br>"))
-end
-
-# ╔═╡ 8eab0e7e-4f0c-4d3d-94a0-85ac4a1c39ac
-gif(anim_2)
-
-# ╔═╡ 94bde2f2-9e85-456b-b99b-df9b14318946
-p_2
-
-# ╔═╡ d1106d9a-360a-444e-bc6b-52270a2df651
-Markdown.parse("""The y vector at the end of answer-2 is
-
-$sketch_2_vector """)
-
-# ╔═╡ f5ab8455-32ed-4107-ba15-20b2c4ed2ae8
-begin
-	timestamp="2023-01-10 15:48:45.834249+00:00"
-	format_dt(timestamp) = DateTime(replace(timestamp, "+00:00" => ""), DateFormat("yyyy-mm-dd HH:MM:SS.sss"))
-end
-
-# ╔═╡ b845cd0c-64b4-440e-a575-61a1456cf403
-format_dt(timestamp)
-
-# ╔═╡ c46e8576-0ec2-41c4-8607-cc1f3215b5da
-timestamp
+# ╔═╡ 86314c50-e636-4ee9-85f8-d52106ff4fdf
+format_dt(timestamp) = DateTime(replace(timestamp, "+00:00" => ""), DateFormat("yyyy-mm-dd HH:MM:SS.ssss"))
 
 # ╔═╡ 00000000-0000-0000-0000-000000000001
 PLUTO_PROJECT_TOML_CONTENTS = """
@@ -1866,6 +1924,8 @@ version = "1.4.1+0"
 # ╟─809138b2-9c88-4805-9ae1-dd0e0b85dbdf
 # ╟─79906dea-0c06-4845-9f14-fbf10b846ed3
 # ╟─105af7a9-3779-4773-a78d-baa0ecdf116c
+# ╠═8e014f62-a1ae-4697-b83c-7fc0c91a0ff6
+# ╠═2e461501-7cc1-4531-b073-d98c068a4f26
 # ╟─693de731-e00b-4e99-b74a-33583f0f05b8
 # ╟─4a243ea6-2027-4d43-a541-8b154889840b
 # ╟─42e1166c-5662-4950-94a1-05d61777e61b
@@ -1874,18 +1934,19 @@ version = "1.4.1+0"
 # ╟─8a60bd52-02a6-41c5-8d4c-829f5e83957a
 # ╟─2a964b44-e2fb-476b-beff-e7b8627ddab8
 # ╟─a52a834b-d8c7-472e-9c82-521324d6259f
-# ╟─8eab0e7e-4f0c-4d3d-94a0-85ac4a1c39ac
+# ╠═8eab0e7e-4f0c-4d3d-94a0-85ac4a1c39ac
 # ╟─c46b5066-8128-4dc1-a71a-45973261aa82
 # ╟─94bde2f2-9e85-456b-b99b-df9b14318946
 # ╟─d1106d9a-360a-444e-bc6b-52270a2df651
 # ╟─065df6ae-57e6-4eaf-9397-1ba5d37b4acc
 # ╠═cd97fda8-984e-4f80-8e91-2ca434321386
+# ╠═cb2f8407-c2a5-4b51-8036-5ea9094b467f
 # ╠═d0c7bd76-ae05-48ad-a76b-ecf2737143da
 # ╠═f4e26142-53ae-4873-9c70-41e4df1851c5
+# ╠═78fb36c4-43e6-441c-a2b5-53c8d0f6f040
 # ╠═bb252b8f-aa11-4567-8f09-fd6c9e6f76ff
+# ╠═a40b5024-f7f1-492f-87b0-9f4940b6fb70
 # ╠═8deb8c04-6e10-4f84-9f61-443c7a9bcb27
-# ╠═f5ab8455-32ed-4107-ba15-20b2c4ed2ae8
-# ╠═b845cd0c-64b4-440e-a575-61a1456cf403
-# ╠═c46e8576-0ec2-41c4-8607-cc1f3215b5da
+# ╠═86314c50-e636-4ee9-85f8-d52106ff4fdf
 # ╟─00000000-0000-0000-0000-000000000001
 # ╟─00000000-0000-0000-0000-000000000002
