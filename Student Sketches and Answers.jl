@@ -26,27 +26,8 @@ begin
 	using Plots
 end
 
-# ╔═╡ 34b968b6-5e76-4ebc-86a1-56c22e91bde6
-
-
-# ╔═╡ d7362d6b-0578-4f7e-9843-31713a51f79a
-# t
-
-# ╔═╡ a0b86ac4-ff49-4ba7-a2ef-9cc0a21de4be
-function plot_sketch_at_time_t(t)
-	# plots the correct row of the animation data given the time t	
-	if t > 20 # change to max_timestamp
-		t = 20 # change to max_timestamp
-	end
-	plot(0:t, [t ^ 2 for t in 0:t])	
-end
-
-# ╔═╡ 8e033519-c177-4534-adbf-1024387eaae2
-md"""
-Some general comments:
-
-- Move all the functions and data processing to cells at the bottom of the notebook. I want to be able to open the notebook, select a student, and then see their sketches and answers one after another without code and stuff in between
-- The gifs skip forward in time because the time series data only records when they changed a point. Use a clock widget to plot the row of the timeseries at the current time. 
+# ╔═╡ 8d0e2589-8c84-44dc-9fa6-b29dcda7d48d
+md"""**Selected Student**
 
 """
 
@@ -63,14 +44,13 @@ md"""**Answer to Question 1**
 
 """
 
+# ╔═╡ 3374ae40-56ac-4437-b2c9-140397131d76
+md"""**Clock 1**
+
+"""
+
 # ╔═╡ 8e014f62-a1ae-4697-b83c-7fc0c91a0ff6
-@bind t Clock()
-
-# ╔═╡ ff8e7dd9-0242-409a-86ac-b833584aeceb
-plot_sketch_at_time_t(t)
-
-# ╔═╡ 2e461501-7cc1-4531-b073-d98c068a4f26
-t
+@bind t_1 Clock()
 
 # ╔═╡ 4a243ea6-2027-4d43-a541-8b154889840b
 md"""**Plot after answer 1**
@@ -88,35 +68,176 @@ md"""**Answer to Question 2**
 
 """
 
-# ╔═╡ 8eab0e7e-4f0c-4d3d-94a0-85ac4a1c39ac
-# gif(anim_2)
-p_2
+# ╔═╡ 1fd08a8b-6401-48bf-8f8e-93b080d7c942
+md"""**Clock 2**
+
+"""
+
+# ╔═╡ 13f6f49e-c59b-4db8-ac7b-e3e8c6b253d8
+@bind t_2 Clock()
 
 # ╔═╡ c46b5066-8128-4dc1-a71a-45973261aa82
 md"""**Final plot after answer 2**
 
 """
 
-# ╔═╡ 94bde2f2-9e85-456b-b99b-df9b14318946
-p_2
-
-# ╔═╡ d1106d9a-360a-444e-bc6b-52270a2df651
-Markdown.parse("""The y vector at the end of answer-2 is
-
-$sketch_2_vector """)
-
 # ╔═╡ 065df6ae-57e6-4eaf-9397-1ba5d37b4acc
 md"""
 ## Functions and data processing
 """
+
+# ╔═╡ 4f1000dd-0e52-40bc-8d75-b2015e3e6198
+function build_sy_dataset(a_df, s_df)
+    sy_data_1 = DataFrame(uid = Int64[], timestamp = DateTime[], y_vector = Vector{Float64}[])
+    sy_data_2 = DataFrame(uid = Int64[], timestamp = DateTime[], y_vector = Vector{Float64}[])
+
+    function update_sy_vector(student_answers, qid, sketch_data, sy_data, student, current_sketch_y_vector = zeros(22))
+        if(size(student_answers, 1) == 2 || student_answers.q_id[1] == 110)
+            end_timestamp_1 = student_answers[student_answers.q_id .== 110, :].timestamp[1]
+        else
+            end_timestamp_1 = student_answers[student_answers.q_id .== 111, :].timestamp[1]
+        end
+
+        if qid == 110
+            animation_data = filter(row -> row.timestamp <= end_timestamp_1, sketch_data)
+            current_sketch_y_vector = zeros(22)
+        else
+            if(size(student_answers, 1) == 2 || student_answers.q_id[1] == 111)
+                end_timestamp_2 = student_answers[student_answers.q_id .== 111, :].timestamp[1]
+            else
+                end_timestamp_2 = sketch_data.timestamp[length(sketch_data.timestamp)]
+            end
+            animation_data = filter(row -> (end_timestamp_1 <= row.timestamp) && (row.timestamp <= end_timestamp_2), sketch_data)
+        end
+
+        x = animation_data.xcor
+        y = animation_data.ycor
+        t = animation_data.timestamp
+
+        for i in 1:size(animation_data, 1)
+            current_sketch_y_vector[x[i] + 1] = y[i]
+            push!(sy_data.uid, student)
+            push!(sy_data.timestamp, t[i])
+            push!(sy_data.y_vector, copy(current_sketch_y_vector))
+        end
+    end
+
+    for i in 1:length(unique(a_df.uid))
+        if unique(a_df.uid)[i] == 73 || unique(a_df.uid)[i] == 87 || unique(a_df.uid)[i] == 106 || unique(a_df.uid)[i] == 100 || unique(a_df.uid)[i] == 104
+            continue
+        end
+        student_answers = a_df[a_df.uid .== unique(a_df.uid)[i], :]
+        sketch_data = filter(row -> row.uid == unique(a_df.uid)[i], s_df)
+
+        update_sy_vector(student_answers, 110, sketch_data, sy_data_1, unique(a_df.uid)[i])
+		# println(sy_data_2)
+        update_sy_vector(student_answers, 111, sketch_data, sy_data_2, unique(a_df.uid)[i],deepcopy(sy_data_1[sy_data_1.uid  .== unique(a_df.uid)[i], :].y_vector[length(sy_data_1[sy_data_1.uid  .== unique(a_df.uid)[i], :].y_vector)]))
+    end
+
+    return sy_data_1, sy_data_2
+end
+
+
+# ╔═╡ f4e26142-53ae-4873-9c70-41e4df1851c5
+# function build_sy_dataset(a_df, s_df)
+#     sy_data_1 = DataFrame(uid = unique(a_df.uid), timestamp = Vector{Vector{String}}(undef, length(unique(a_df.uid))), y_vector = Vector{Vector{Vector{Float64}}}(undef, length(unique(a_df.uid))))
+#     sy_data_2 = DataFrame(uid = unique(a_df.uid), timestamp = Vector{Vector{String}}(undef, length(unique(a_df.uid))), y_vector = Vector{Vector{Vector{Float64}}}(undef, length(unique(a_df.uid))))
+
+
+#     function update_sy_vector(student_answers,qid, sketch_data, sy_data, student, 								current_sketch_y_vector = [], current_timestamp = [])
+# 		# println(student_answers)
+# 		if(size(student_answers,1)==2 || student_answers.q_id[1]==110)
+# 			end_timestamp_1 = student_answers[student_answers.q_id .== 110, 													:].timestamp[1]
+# 		else
+# 			end_timestamp_1 = student_answers[student_answers.q_id .== 111, 													:].timestamp[1]
+# 		end
+#         if qid == 110
+#             	animation_data = filter(row -> row.timestamp <= end_timestamp_1, 											sketch_data)
+#             	current_sketch_y_vector = zeros(22)
+#         else
+# 			if(size(student_answers,1)==2 || student_answers.q_id[1]==111)
+# 	            end_timestamp_2 = student_answers[student_answers.q_id .== 111, 																	:].timestamp[1]
+# 			else
+# 				end_timestamp_2=sketch_data.timestamp[length(sketch_data.timestamp)]
+# 			end
+# 				animation_data = filter(row -> (end_timestamp_1 <= row.timestamp) && 					(row.timestamp <= end_timestamp_2), sketch_data)
+#         end
+
+#         x = animation_data.xcor
+#         y = animation_data.ycor
+#         t = animation_data.timestamp
+
+#         for i in 1:size(animation_data, 1)
+#             current_sketch_y_vector[x[i] + 1] = y[i]
+#             push!(sy_data.timestamp[student], t[i])
+#             push!(sy_data.y_vector[student], copy(current_sketch_y_vector))
+#         end
+#     end
+
+#     for i in 1:length(unique(a_df.uid))
+# 		# println(unique(a_df.uid))
+# 		if unique(a_df.uid)[i]==73 || unique(a_df.uid)[i]==87 ||unique(a_df.uid)[i]==106 || unique(a_df.uid)[i]==100 || unique(a_df.uid)[i]==104
+# 			continue
+# 		end
+# 	    student_answers = a_df[a_df.uid .== unique(a_df.uid)[i], :]
+# 	    sketch_data = filter(row -> row.uid == unique(a_df.uid)[i], s_df)
+# 		# if(i==2)
+# 		# 	println(student_answers)
+# 		# 	println(sketch_data)
+# 		# end
+#         sy_data_1.timestamp[i] = []
+#         sy_data_1.y_vector[i] = []
+#         update_sy_vector(student_answers,110, sketch_data, sy_data_1, i)
+
+#         sy_data_2.timestamp[i] = []
+#         sy_data_2.y_vector[i] = []
+# 		# println(sy_data_1.y_vector[student][length(sy_data_1.y_vector[student])-1])
+#         update_sy_vector(student_answers,111, sketch_data, sy_data_2, i, sy_data_1.y_vector[i][length(sy_data_1.y_vector[i])])
+		
+#     end
+
+#     return sy_data_1, sy_data_2
+# end
+
+
+# ╔═╡ a7751416-34d8-4cf5-a229-78a3a074c6c1
+function PLOT(sy_data,t)
+	# println(sy_data)
+	begin_stamp=sy_data.timestamp[1]
+end_stamp=sy_data.timestamp[length(sy_data.timestamp)]
+	current_stamp=begin_stamp+Dates.Millisecond(t)
+	# println(current_stamp)
+	current_data=sy_data[sy_data.timestamp .<= current_stamp, :]
+	# println(current_data)
+	p = plot(collect(1:21), current_data.y_vector[length(current_data.y_vector)], 
+			xlims=(0, 21), 
+			ylims=(-10, 10),    
+			seriestype = :line,  # Set the seriestype to line
+			linecolor = :dodgerblue,
+			linewidth = 5,
+			background_color = :black,
+			markershape = :circle,
+			markercolor = :deepskyblue,
+			markersize = 5,
+			markerstrokecolor = :skyblue,
+			legend=false)
+	
+	title!("Timestamp: $(min(end_stamp,begin_stamp+Dates.Millisecond(t)))")
+end
+
+# ╔═╡ 86314c50-e636-4ee9-85f8-d52106ff4fdf
+format_dt(timestamp) = DateTime(replace(timestamp, "+00:00" => ""), DateFormat("yyyy-mm-dd HH:MM:SS.ssss"))
 
 # ╔═╡ cb2f8407-c2a5-4b51-8036-5ea9094b467f
 function format_timestamp_data(timestamp_data)
     formatted_timestamp_data = []
     for timestamp in timestamp_data
 		timestamp=timestamp[1:23]
-		# format_dt(timestamp) = DateTime(replace(timestamp, "+00:00" => ""), DateFormat("yyyy-mm-dd HH:MM:SS.ssss"))
-        push!(formatted_timestamp_data, timestamp)
+		if timestamp[20]=='+'
+			timestamp=timestamp[1:19]*".000"
+		end
+		formatted_timestamp=format_dt(timestamp)
+        push!(formatted_timestamp_data, format_dt(timestamp))
     end
     return formatted_timestamp_data
 end
@@ -136,50 +257,6 @@ end
 # ╔═╡ 0584d086-883d-49bf-b1e3-b01e0ba33a12
 @bind selected_student Select(unique(a_df.uid))
 
-# ╔═╡ f4e26142-53ae-4873-9c70-41e4df1851c5
-#This function builds two datasets sy_data_1 and sy_data_2 containing the y vectors for each student at the end of answer-1 and 2 respectively. Each data set is a list of vectors containing the y vector for i_th student at ith index, i.e. sy_data_1[i] contains the y vector after answer-1 for i_th student.
-function build_sy_dataset(a_df,s_df)
-		
-		sy_data_1 = [[] for i in 1:108]
-		sy_data_2 = [[] for i in 1:108]
-		student_answers = a_df[a_df.uid .== selected_student, :] 
-		sketch_data = filter(row -> row.uid == selected_student, s_df)
-	
-		#helper function for updating the current y_vector for both qid_s, which will be called twice below, it takes the input qid, sketch_data(1 or 2), sy_data(1 or 2) whichever needs to be updated, student(uid), current_sketch_y_vector(which is initialised to empty list in case no initial vector is given while calling the function and will be updated inside the function)
-		function update_sy_vector(qid , sketch_data , sy_data , student , 			 current_sketch_y_vector = [])
-			end_timestamp_1 = student_answers[student_answers.q_id .== 110, :].timestamp[1]
-			if(qid == 110)
-				#for 1st Q only end timestamp after answer-1 is needed, initalising the current_sketch_y_vector to zero for 1st Q which will not be given in the input
-				#animation data is the filtered data from sketch_data containing entries within the timestamp range for the respective Questions
-				animation_data = filter(row -> row.timestamp <= end_timestamp_1, sketch_data) 
-				current_sketch_y_vector = zeros(maximum(animation_data.xcor) - minimum(animation_data.xcor) + 1)
-			else
-				#for 2nd Q, end timestamp after ans 2 is defined and animation data accordingly
-				end_timestamp_2 = student_answers[student_answers.q_id .== 111, :].timestamp[1]
-				animation_data = filter(row -> (end_timestamp_1 <= row.timestamp) && (row.timestamp <= end_timestamp_2), sketch_data)
-			end
-			
-			x = animation_data.xcor #a vector containing the x coordinates from the animation_data which were recorded within the timestamp range for the respective Questions, similar for y
-			y = animation_data.ycor
-
-			#running a loop in the range from 1 to the size of animation_data across dimension 1(which means the number of rows, hence the number of changes in coordintes within the timestamp range)
-			for i in 1:size(animation_data, 1) 
-				current_sketch_y_vector[x[i] + 1] = y[i] #updating the current vector at the (x_i+1)th position(indexing in list starts from 1 but x axis starts from 0 so there is a +1) with the y_ith value in the ith iteration(i_th row of the animation_data table)
-			end
-			sy_data[student] = current_sketch_y_vector #storing the final vector at the index of student in the respective dataset
-		end
-		for student in unique(a_df.uid)
-			#no initial y vector for 1st Q
-			update_sy_vector(110 , sketch_data,sy_data_1 , student) 
-			#for 2nd Q, initial y_vector taken as the vector after ans-1 from the sy_data_1 set which was created just above
-			update_sy_vector(111 , sketch_data,sy_data_2 , student, sy_data_1[student])
-		end
-	return sy_data_1 , sy_data_2
-end	
-
-# ╔═╡ 78fb36c4-43e6-441c-a2b5-53c8d0f6f040
-
-
 # ╔═╡ bb252b8f-aa11-4567-8f09-fd6c9e6f76ff
 begin	
 	student_answers = a_df[a_df.uid .== selected_student, :]    #filtered answer data frame containing the entries of the selected student
@@ -188,14 +265,12 @@ begin
 	text_answer_110 = student_answers[student_answers.q_id .== 110, :].text_answer[1]; #ans for Q1
 	text_answer_111 = student_answers[student_answers.q_id .== 111, :].text_answer[1]; #ans for Q2
 	sketch_data = filter(row -> row.uid == selected_student, s_df) #filtered sketch data frame containing the entries of the selected student
-	end_timestamp_1 = student_answers[student_answers.q_id .== 110, :].timestamp[1] 
-	animation_data_1 = filter(row -> row.timestamp <= end_timestamp_1, sketch_data)
-	const next_timestamp_index = Ref(1)
-	p,sketch_1_vector=build_animation(animation_data_1,t)
-	end_timestamp_2 = student_answers[student_answers.q_id .== 111, :].timestamp[1]
-	animation_data_2 = filter(row -> (end_timestamp_1 <= row.timestamp) && (row.timestamp<= end_timestamp_2), sketch_data)
-	# p_2,sketch_2_vector=build_animation(animation_data_2,t,sketch_1_vector)
-	sy_data_1 , sy_data_2 = build_sy_dataset(a_df, s_df)  #building the dataset containing the final y-vectors after Q1 and Q2 for each student
+	sy_data_1 , sy_data_2 = build_sy_dataset(a_df, s_df)  #building the dataset containing the timestamp vs y-vectors at each timestamp for each student
+	animation_data_1=sy_data_1[sy_data_1.uid  .== selected_student, :] #filtered y vectors for selected student
+	animation_data_2=sy_data_2[sy_data_2.uid  .== selected_student, :]
+	#final sketch vectors after Q1 and Q2
+	sketch_1_vector=animation_data_1.y_vector[length(animation_data_1.y_vector)]
+	sketch_2_vector=animation_data_2.y_vector[length(animation_data_2.y_vector)]
 end
 
 # ╔═╡ 809138b2-9c88-4805-9ae1-dd0e0b85dbdf
@@ -207,11 +282,25 @@ begin
 end
 
 # ╔═╡ 693de731-e00b-4e99-b74a-33583f0f05b8
-# gif(anim)
-p
+Plot_till_answer_1=PLOT(animation_data_1,t_1-1)
 
 # ╔═╡ 42e1166c-5662-4950-94a1-05d61777e61b
-p
+begin
+	final_plot_1 = plot(collect(1:21), sketch_1_vector, 
+			xlims=(0, 21), 
+			ylims=(-10, 10),    
+			seriestype = :line,  # Set the seriestype to line
+			linecolor = :dodgerblue,
+			linewidth = 5,
+			background_color = :black,
+			markershape = :circle,
+			markercolor = :deepskyblue,
+			markersize = 5,
+			markerstrokecolor = :skyblue,
+			legend=false)
+	
+	title!("Timestamp: $(animation_data_1.timestamp[length(animation_data_1.timestamp)])")
+end
 
 # ╔═╡ d1fb2a00-d260-4814-90f0-f968b590618c
 Markdown.parse("""The y vector at the end of answer-1 is 
@@ -226,100 +315,31 @@ begin
 	HTML(replace(text_answer_111, "\\r\\n" => "<br>"))
 end
 
-# ╔═╡ a40b5024-f7f1-492f-87b0-9f4940b6fb70
+# ╔═╡ 8eab0e7e-4f0c-4d3d-94a0-85ac4a1c39ac
+plot_till_answer_2=PLOT(animation_data_2,t_2-1)
 
-
-# ╔═╡ 8deb8c04-6e10-4f84-9f61-443c7a9bcb27
+# ╔═╡ 94bde2f2-9e85-456b-b99b-df9b14318946
 begin
-	# A function which takes the animation data frame and the optional initial y_vector(if no vector is given in input then it takes the default zero values) for the respective Question(1 or 2) and builds an animation of plot vs timestamp and returns the animation, final plot, final y vector
-	function build_animation(animation_data,t, current_sketch_y_vector=zeros(22))
-		x = animation_data.xcor #a vector containing the x coordinates from the animation_data which were recorded within the timestamp range for the respective Questions, similar for y
-		y = animation_data.ycor
-		xmin = 0     #defining the range of x and y values for the plot
-		xmax = 20
-		ymin = -10
-		ymax = 10
-		current_sketch_x_vector=collect(xmin:xmax)  #a vector containing the integer x values from xmin to xmax for x-axis, which we'll use to plot against the current_sketch_y_vector vector
-
-
-	p=plot(current_sketch_x_vector, current_sketch_y_vector,   #plotting the initial vectors
-			lims=(xmin, xmax), 
-			ylims=(ymin, ymax),     
-			sseriestype = :line,  # Set the seriestype to line
+	final_plot_2 = plot(collect(1:21), sketch_2_vector, 
+			xlims=(0, 21), 
+			ylims=(-10, 10),    
+			seriestype = :line,  # Set the seriestype to line
 			linecolor = :dodgerblue,
 			linewidth = 5,
-	    	background_color = :black,
+			background_color = :black,
 			markershape = :circle,
-	    	markercolor = :deepskyblue,
-	    	markersize = 5,
-	    	markerstrokecolor = :skyblue,
+			markercolor = :deepskyblue,
+			markersize = 5,
+			markerstrokecolor = :skyblue,
 			legend=false)
-	begin_timestamp=animation_data[1,:timestamp]
-	end_timestamp=animation_data[size(animation_data,1),:timestamp]
 	
-
-		# temp=1
-		# println(format_dt(begin_timestamp))
-		# println(format_dt(end_timestamp))
-	# Set up the animation
-	# anim = @animate while format_dt(begin_timestamp)+Dates.Millisecond(temp*100)<=format_dt(begin_timestamp)+Dates.Millisecond(2000)	#running a loop in the range from 1 to the size of animation_data across dimension 1(which means the number of rows, hence the number of changes in coordintes within the timestamp range)
-	    # Extract the current timestamp
-		println(next_timestamp_index[])
-			if (format_dt(begin_timestamp)+Dates.Millisecond(t-1)<=format_dt(end_timestamp))
-			println(format_dt(begin_timestamp)+Dates.Millisecond(t-1))
-			println(format_dt(animation_data[next_timestamp_index, 	:timestamp]))
-		if format_dt(begin_timestamp)+Dates.Millisecond(t-1)==format_dt(animation_data[next_timestamp_index, 	:timestamp])
-			println("hello")
-			current_sketch_y_vector[x[next_timestamp_index+1]=y[next_timestamp_index]
-			next_timestamp_index=next_timestamp_index+1
-		end
-			#updating the current vector at the (x_i+1)th position(indexing in list starts from 1 but x axis starts from 0 so there is a +1) with the y_ith value in the ith iteration(i_th row of the animation_data table)
-			
-			p = plot(current_sketch_x_vector, current_sketch_y_vector, 
-					xlims=(xmin, xmax), 
-					ylims=(ymin, ymax),    
-					seriestype = :line,  # Set the seriestype to line
-					linecolor = :dodgerblue,
-					linewidth = 5,
-					background_color = :black,
-					markershape = :circle,
-					markercolor = :deepskyblue,
-					markersize = 5,
-					markerstrokecolor = :skyblue,
-					legend=false)
-			
-			title!("Timestamp: $(format_dt(begin_timestamp)+Dates.Millisecond(t))")
-		# temp=temp+1
-		end
-	# end
-	# anim = @animate for i in 1:size(animation_data, 1)  			#running a loop in the range from 1 to the size of animation_data across dimension 1(which means the number of rows, hence the number of changes in coordintes within the timestamp range)
-	#     # Extract the current timestamp
-	#     timestamp = animation_data[i, :timestamp]
-	# 		#updating the current vector at the (x_i+1)th position(indexing in list starts from 1 but x axis starts from 0 so there is a +1) with the y_ith value in the ith iteration(i_th row of the animation_data table)
-	# 		current_sketch_y_vector[x[i]+1]=y[i]
-	# 		p = plot(current_sketch_x_vector, current_sketch_y_vector, 
-	# 				xlims=(xmin, xmax), 
-	# 				ylims=(ymin, ymax),    
-	# 				seriestype = :line,  # Set the seriestype to line
-	# 				linecolor = :dodgerblue,
-	# 				linewidth = 5,
-	# 				background_color = :black,
-	# 				markershape = :circle,
-	# 				markercolor = :deepskyblue,
-	# 				markersize = 5,
-	# 				markerstrokecolor = :skyblue,
-	# 				legend=false)
-			
-	# 		title!("Timestamp: $timestamp")
-	# end
-
-	# return anim,p,current_sketch_y_vector
-	return p,current_sketch_y_vector
-	end
+	title!("Timestamp: $(animation_data_2.timestamp[length(animation_data_2.timestamp)])")
 end
 
-# ╔═╡ 86314c50-e636-4ee9-85f8-d52106ff4fdf
-format_dt(timestamp) = DateTime(replace(timestamp, "+00:00" => ""), DateFormat("yyyy-mm-dd HH:MM:SS.ssss"))
+# ╔═╡ d1106d9a-360a-444e-bc6b-52270a2df651
+Markdown.parse("""The y vector at the end of answer-2 is
+
+$sketch_2_vector """)
 
 # ╔═╡ 00000000-0000-0000-0000-000000000001
 PLUTO_PROJECT_TOML_CONTENTS = """
@@ -1914,18 +1934,14 @@ version = "1.4.1+0"
 """
 
 # ╔═╡ Cell order:
-# ╠═34b968b6-5e76-4ebc-86a1-56c22e91bde6
-# ╠═d7362d6b-0578-4f7e-9843-31713a51f79a
-# ╠═ff8e7dd9-0242-409a-86ac-b833584aeceb
-# ╠═a0b86ac4-ff49-4ba7-a2ef-9cc0a21de4be
-# ╟─8e033519-c177-4534-adbf-1024387eaae2
-# ╠═0584d086-883d-49bf-b1e3-b01e0ba33a12
+# ╟─8d0e2589-8c84-44dc-9fa6-b29dcda7d48d
+# ╟─0584d086-883d-49bf-b1e3-b01e0ba33a12
 # ╟─ef94f757-622a-45b5-89cb-d140e54135a4
 # ╟─809138b2-9c88-4805-9ae1-dd0e0b85dbdf
 # ╟─79906dea-0c06-4845-9f14-fbf10b846ed3
 # ╟─105af7a9-3779-4773-a78d-baa0ecdf116c
-# ╠═8e014f62-a1ae-4697-b83c-7fc0c91a0ff6
-# ╠═2e461501-7cc1-4531-b073-d98c068a4f26
+# ╟─3374ae40-56ac-4437-b2c9-140397131d76
+# ╟─8e014f62-a1ae-4697-b83c-7fc0c91a0ff6
 # ╟─693de731-e00b-4e99-b74a-33583f0f05b8
 # ╟─4a243ea6-2027-4d43-a541-8b154889840b
 # ╟─42e1166c-5662-4950-94a1-05d61777e61b
@@ -1934,19 +1950,20 @@ version = "1.4.1+0"
 # ╟─8a60bd52-02a6-41c5-8d4c-829f5e83957a
 # ╟─2a964b44-e2fb-476b-beff-e7b8627ddab8
 # ╟─a52a834b-d8c7-472e-9c82-521324d6259f
-# ╠═8eab0e7e-4f0c-4d3d-94a0-85ac4a1c39ac
+# ╟─1fd08a8b-6401-48bf-8f8e-93b080d7c942
+# ╟─13f6f49e-c59b-4db8-ac7b-e3e8c6b253d8
+# ╟─8eab0e7e-4f0c-4d3d-94a0-85ac4a1c39ac
 # ╟─c46b5066-8128-4dc1-a71a-45973261aa82
 # ╟─94bde2f2-9e85-456b-b99b-df9b14318946
 # ╟─d1106d9a-360a-444e-bc6b-52270a2df651
 # ╟─065df6ae-57e6-4eaf-9397-1ba5d37b4acc
-# ╠═cd97fda8-984e-4f80-8e91-2ca434321386
+# ╟─cd97fda8-984e-4f80-8e91-2ca434321386
 # ╠═cb2f8407-c2a5-4b51-8036-5ea9094b467f
 # ╠═d0c7bd76-ae05-48ad-a76b-ecf2737143da
-# ╠═f4e26142-53ae-4873-9c70-41e4df1851c5
-# ╠═78fb36c4-43e6-441c-a2b5-53c8d0f6f040
+# ╠═4f1000dd-0e52-40bc-8d75-b2015e3e6198
+# ╟─f4e26142-53ae-4873-9c70-41e4df1851c5
 # ╠═bb252b8f-aa11-4567-8f09-fd6c9e6f76ff
-# ╠═a40b5024-f7f1-492f-87b0-9f4940b6fb70
-# ╠═8deb8c04-6e10-4f84-9f61-443c7a9bcb27
+# ╠═a7751416-34d8-4cf5-a229-78a3a074c6c1
 # ╠═86314c50-e636-4ee9-85f8-d52106ff4fdf
 # ╟─00000000-0000-0000-0000-000000000001
 # ╟─00000000-0000-0000-0000-000000000002
