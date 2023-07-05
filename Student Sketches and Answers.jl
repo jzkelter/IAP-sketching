@@ -86,130 +86,14 @@ md"""
 ## Functions and data processing
 """
 
-# ╔═╡ 4f1000dd-0e52-40bc-8d75-b2015e3e6198
-function build_sy_dataset(a_df, s_df)
-    sy_data_1 = DataFrame(uid = Int64[], timestamp = DateTime[], y_vector = Vector{Float64}[])
-    sy_data_2 = DataFrame(uid = Int64[], timestamp = DateTime[], y_vector = Vector{Float64}[])
-
-    function update_sy_vector(student_answers, qid, sketch_data, sy_data, student, current_sketch_y_vector = zeros(22))
-        if(size(student_answers, 1) == 2 || student_answers.q_id[1] == 110)
-            end_timestamp_1 = student_answers[student_answers.q_id .== 110, :].timestamp[1]
-        else
-            end_timestamp_1 = student_answers[student_answers.q_id .== 111, :].timestamp[1]
-        end
-
-        if qid == 110
-            animation_data = filter(row -> row.timestamp <= end_timestamp_1, sketch_data)
-            current_sketch_y_vector = zeros(22)
-        else
-            if(size(student_answers, 1) == 2 || student_answers.q_id[1] == 111)
-                end_timestamp_2 = student_answers[student_answers.q_id .== 111, :].timestamp[1]
-            else
-                end_timestamp_2 = sketch_data.timestamp[length(sketch_data.timestamp)]
-            end
-            animation_data = filter(row -> (end_timestamp_1 <= row.timestamp) && (row.timestamp <= end_timestamp_2), sketch_data)
-        end
-
-        x = animation_data.xcor
-        y = animation_data.ycor
-        t = animation_data.timestamp
-
-        for i in 1:size(animation_data, 1)
-            current_sketch_y_vector[x[i] + 1] = y[i]
-            push!(sy_data.uid, student)
-            push!(sy_data.timestamp, t[i])
-            push!(sy_data.y_vector, copy(current_sketch_y_vector))
-        end
-    end
-
-    for i in 1:length(unique(a_df.uid))
-        if unique(a_df.uid)[i] == 73 || unique(a_df.uid)[i] == 87 || unique(a_df.uid)[i] == 106 || unique(a_df.uid)[i] == 100 || unique(a_df.uid)[i] == 104
-            continue
-        end
-        student_answers = a_df[a_df.uid .== unique(a_df.uid)[i], :]
-        sketch_data = filter(row -> row.uid == unique(a_df.uid)[i], s_df)
-
-        update_sy_vector(student_answers, 110, sketch_data, sy_data_1, unique(a_df.uid)[i])
-		# println(sy_data_2)
-        update_sy_vector(student_answers, 111, sketch_data, sy_data_2, unique(a_df.uid)[i],deepcopy(sy_data_1[sy_data_1.uid  .== unique(a_df.uid)[i], :].y_vector[length(sy_data_1[sy_data_1.uid  .== unique(a_df.uid)[i], :].y_vector)]))
-    end
-
-    return sy_data_1, sy_data_2
-end
-
-
-# ╔═╡ f4e26142-53ae-4873-9c70-41e4df1851c5
-# function build_sy_dataset(a_df, s_df)
-#     sy_data_1 = DataFrame(uid = unique(a_df.uid), timestamp = Vector{Vector{String}}(undef, length(unique(a_df.uid))), y_vector = Vector{Vector{Vector{Float64}}}(undef, length(unique(a_df.uid))))
-#     sy_data_2 = DataFrame(uid = unique(a_df.uid), timestamp = Vector{Vector{String}}(undef, length(unique(a_df.uid))), y_vector = Vector{Vector{Vector{Float64}}}(undef, length(unique(a_df.uid))))
-
-
-#     function update_sy_vector(student_answers,qid, sketch_data, sy_data, student, 								current_sketch_y_vector = [], current_timestamp = [])
-# 		# println(student_answers)
-# 		if(size(student_answers,1)==2 || student_answers.q_id[1]==110)
-# 			end_timestamp_1 = student_answers[student_answers.q_id .== 110, 													:].timestamp[1]
-# 		else
-# 			end_timestamp_1 = student_answers[student_answers.q_id .== 111, 													:].timestamp[1]
-# 		end
-#         if qid == 110
-#             	animation_data = filter(row -> row.timestamp <= end_timestamp_1, 											sketch_data)
-#             	current_sketch_y_vector = zeros(22)
-#         else
-# 			if(size(student_answers,1)==2 || student_answers.q_id[1]==111)
-# 	            end_timestamp_2 = student_answers[student_answers.q_id .== 111, 																	:].timestamp[1]
-# 			else
-# 				end_timestamp_2=sketch_data.timestamp[length(sketch_data.timestamp)]
-# 			end
-# 				animation_data = filter(row -> (end_timestamp_1 <= row.timestamp) && 					(row.timestamp <= end_timestamp_2), sketch_data)
-#         end
-
-#         x = animation_data.xcor
-#         y = animation_data.ycor
-#         t = animation_data.timestamp
-
-#         for i in 1:size(animation_data, 1)
-#             current_sketch_y_vector[x[i] + 1] = y[i]
-#             push!(sy_data.timestamp[student], t[i])
-#             push!(sy_data.y_vector[student], copy(current_sketch_y_vector))
-#         end
-#     end
-
-#     for i in 1:length(unique(a_df.uid))
-# 		# println(unique(a_df.uid))
-# 		if unique(a_df.uid)[i]==73 || unique(a_df.uid)[i]==87 ||unique(a_df.uid)[i]==106 || unique(a_df.uid)[i]==100 || unique(a_df.uid)[i]==104
-# 			continue
-# 		end
-# 	    student_answers = a_df[a_df.uid .== unique(a_df.uid)[i], :]
-# 	    sketch_data = filter(row -> row.uid == unique(a_df.uid)[i], s_df)
-# 		# if(i==2)
-# 		# 	println(student_answers)
-# 		# 	println(sketch_data)
-# 		# end
-#         sy_data_1.timestamp[i] = []
-#         sy_data_1.y_vector[i] = []
-#         update_sy_vector(student_answers,110, sketch_data, sy_data_1, i)
-
-#         sy_data_2.timestamp[i] = []
-#         sy_data_2.y_vector[i] = []
-# 		# println(sy_data_1.y_vector[student][length(sy_data_1.y_vector[student])-1])
-#         update_sy_vector(student_answers,111, sketch_data, sy_data_2, i, sy_data_1.y_vector[i][length(sy_data_1.y_vector[i])])
-		
-#     end
-
-#     return sy_data_1, sy_data_2
-# end
-
-
 # ╔═╡ a7751416-34d8-4cf5-a229-78a3a074c6c1
-function PLOT(sy_data,t)
-	# println(sy_data)
-	begin_stamp=sy_data.timestamp[1]
-end_stamp=sy_data.timestamp[length(sy_data.timestamp)]
+#function to plot the sketches at time t taken as input from the clock, using the filered animation data for the selected student
+function plot_at_time_t(animation_data,t)
+	begin_stamp=animation_data.timestamp[1]
+	end_stamp=animation_data.timestamp[end]
 	current_stamp=begin_stamp+Dates.Millisecond(t)
-	# println(current_stamp)
-	current_data=sy_data[sy_data.timestamp .<= current_stamp, :]
-	# println(current_data)
-	p = plot(collect(1:21), current_data.y_vector[length(current_data.y_vector)], 
+	current_data=animation_data[animation_data.timestamp .<= current_stamp, :]
+	p = plot(collect(1:21), current_data.y_vector[end], 
 			xlims=(0, 21), 
 			ylims=(-10, 10),    
 			seriestype = :line,  # Set the seriestype to line
@@ -252,37 +136,118 @@ begin
 	s_df = filter(row -> row.timestamp >= "2023-01-01 00:00:00.000000+00:00", s_df)
 	s_df.timestamp = format_timestamp_data(s_df.timestamp)	
 	a_df.timestamp = format_timestamp_data(a_df.timestamp)	
+	q_id_1=110
+	q_id_2=111
 end
 
 # ╔═╡ 0584d086-883d-49bf-b1e3-b01e0ba33a12
 @bind selected_student Select(unique(a_df.uid))
 
-# ╔═╡ bb252b8f-aa11-4567-8f09-fd6c9e6f76ff
-begin	
-	student_answers = a_df[a_df.uid .== selected_student, :]    #filtered answer data frame containing the entries of the selected student
-	sketch_url_110 = student_answers[student_answers.q_id .== 110, :].sketch_url[1]; #url for Q1
-	sketch_url_111 = student_answers[student_answers.q_id .== 111, :].sketch_url[1]; #url for Q2
-	text_answer_110 = student_answers[student_answers.q_id .== 110, :].text_answer[1]; #ans for Q1
-	text_answer_111 = student_answers[student_answers.q_id .== 111, :].text_answer[1]; #ans for Q2
-	sketch_data = filter(row -> row.uid == selected_student, s_df) #filtered sketch data frame containing the entries of the selected student
-	sy_data_1 , sy_data_2 = build_sy_dataset(a_df, s_df)  #building the dataset containing the timestamp vs y-vectors at each timestamp for each student
-	animation_data_1=sy_data_1[sy_data_1.uid  .== selected_student, :] #filtered y vectors for selected student
+# ╔═╡ 4f1000dd-0e52-40bc-8d75-b2015e3e6198
+function build_sy_dataset(a_df, s_df)
+    sy_data_1 = DataFrame(uid = Int64[], timestamp = DateTime[], y_vector = Vector{Float64}[])
+    sy_data_2 = DataFrame(uid = Int64[], timestamp = DateTime[], y_vector = Vector{Float64}[])
+
+	#A helper function to update the y vector for a particular student and a particular Q, it takes the filtered answer dataset for that student, qid, sketch dataset and initial y vector as inputs
+    function update_sy_vector(student_answers, qid, sketch_data, sy_data, student, current_sketch_y_vector = zeros(22))
+
+		#if the student has answers for both Qs or if only 1 answer and it is the 1st Q's answer then we set the end_timestamp_1 using the timestamp for 1st answer
+        if(size(student_answers, 1) == 2 || student_answers.q_id[1] == q_id_1)
+            end_timestamp_1 = student_answers[student_answers.q_id .== q_id_1, :].timestamp[1]
+
+		#otherwise be build the complete y vector till 2nd answer
+        else
+            end_timestamp_1 = student_answers[student_answers.q_id .== q_id_2, :].timestamp[1]
+        end
+		
+		#filtering animation data for answer 1 using end_timestamp_1 only
+        if qid == q_id_1 
+            animation_data = filter(row -> row.timestamp <= end_timestamp_1, sketch_data)
+            # current_sketch_y_vector = zeros(22)
+        else
+			#for 2nd Q, defining the end_timestamp 2 in a similar manner as above and using it to filter the animation data
+            if(size(student_answers, 1) == 2 || student_answers.q_id[1] == q_id_2)
+                end_timestamp_2 = student_answers[student_answers.q_id .== q_id_2, :].timestamp[1]
+            else
+			end_timestamp_2 = sketch_data.timestamp[end]
+            end
+            animation_data = filter(row -> (end_timestamp_1 <= row.timestamp) && (row.timestamp <= end_timestamp_2), sketch_data)
+        end
+
+		#columns for x, y and timestamp
+        x = animation_data.xcor
+        y = animation_data.ycor
+        t = animation_data.timestamp
+
+        for i in 1:size(animation_data, 1) 
+			#updating the y vector using x and y data points
+            current_sketch_y_vector[x[i] + 1] = y[i] 
+			#pushing the uid, timestamp and the copy of updated y vector in the dataframe
+            push!(sy_data.uid, student)
+            push!(sy_data.timestamp, t[i])
+            push!(sy_data.y_vector, copy(current_sketch_y_vector))
+        end
+    end
+
+    for uid in unique(a_df.uid)
+		#ignoring the uids with no sketch data
+        if !any(s_df[:, :uid] .== uid)
+            continue
+        end
+		#filtering the datsets for the selected student
+        student_answers = a_df[a_df.uid .== uid, :]
+        sketch_data = s_df[s_df.uid .== uid, :]
+		#calling the helepr function to update the y vectors for the selected student
+        update_sy_vector(student_answers, q_id_1, sketch_data, sy_data_1, uid)
+        update_sy_vector(
+			student_answers, 
+			q_id_2, 
+			sketch_data, 
+			sy_data_2, 
+			uid,
+			deepcopy(sy_data_1[sy_data_1.uid  .== uid, :].y_vector[end]))
+    end
+
+    return sy_data_1, sy_data_2
+end
+
+
+# ╔═╡ 5a1f1db0-bc13-4e3b-ac5a-ba63b71b5ba3
+begin
+	#filtered answer data frame containing the entries of the selected student
+	student_answers = a_df[a_df.uid .== selected_student, :]    
+	if(size(student_answers, 1) == 2 || student_answers.q_id[1] == q_id_1)
+		sketch_url_q_id_1 = student_answers[student_answers.q_id .== q_id_1, :].sketch_url[1]; #url for Q1
+		text_answer_q_id_1 = student_answers[student_answers.q_id .== q_id_1, :].text_answer[1]; #ans for Q1
+	end
+	if(size(student_answers, 1) == 2 || student_answers.q_id[1] == q_id_2)
+		sketch_url_q_id_2 = student_answers[student_answers.q_id .== q_id_2, :].sketch_url[1]; #url for Q2
+		text_answer_q_id_2 = student_answers[student_answers.q_id .== q_id_2, :].text_answer[1]; #ans for Q2
+	end
+	 #filtered sketch data frame containing the entries of the selected student
+	sketch_data = filter(row -> row.uid == selected_student, s_df)
+	#building the dataset containing the timestamp vs y-vectors at each timestamp for each student
+	sy_data_1 , sy_data_2 = build_sy_dataset(
+		a_df[a_df.uid .== selected_student, :], 
+		s_df[s_df.uid .== selected_student, :])  
+	#filtered y vectors for selected student
+	animation_data_1=sy_data_1[sy_data_1.uid  .== selected_student, :] 
 	animation_data_2=sy_data_2[sy_data_2.uid  .== selected_student, :]
 	#final sketch vectors after Q1 and Q2
-	sketch_1_vector=animation_data_1.y_vector[length(animation_data_1.y_vector)]
-	sketch_2_vector=animation_data_2.y_vector[length(animation_data_2.y_vector)]
+	sketch_1_vector=animation_data_1.y_vector[end]
+	sketch_2_vector=animation_data_2.y_vector[end]
 end
 
 # ╔═╡ 809138b2-9c88-4805-9ae1-dd0e0b85dbdf
-Resource(strip(sketch_url_110), :width => 500)
+Resource(strip(sketch_url_q_id_1), :width => 500)
 
 # ╔═╡ 105af7a9-3779-4773-a78d-baa0ecdf116c
 begin
-	HTML(replace(text_answer_110, "\\r\\n" => "<br>"))
+	HTML(replace(text_answer_q_id_1, "\\r\\n" => "<br>"))
 end
 
 # ╔═╡ 693de731-e00b-4e99-b74a-33583f0f05b8
-Plot_till_answer_1=PLOT(animation_data_1,t_1-1)
+Plot_till_answer_1=plot_at_time_t(animation_data_1,t_1-1)
 
 # ╔═╡ 42e1166c-5662-4950-94a1-05d61777e61b
 begin
@@ -308,15 +273,15 @@ Markdown.parse("""The y vector at the end of answer-1 is
 $sketch_1_vector """)
 
 # ╔═╡ 8a60bd52-02a6-41c5-8d4c-829f5e83957a
-Resource(strip(sketch_url_111), :width => 500)
+Resource(strip(sketch_url_q_id_2), :width => 500)
 
 # ╔═╡ a52a834b-d8c7-472e-9c82-521324d6259f
 begin
-	HTML(replace(text_answer_111, "\\r\\n" => "<br>"))
+	HTML(replace(text_answer_q_id_2, "\\r\\n" => "<br>"))
 end
 
 # ╔═╡ 8eab0e7e-4f0c-4d3d-94a0-85ac4a1c39ac
-plot_till_answer_2=PLOT(animation_data_2,t_2-1)
+plot_till_answer_2=plot_at_time_t(animation_data_2,t_2-1)
 
 # ╔═╡ 94bde2f2-9e85-456b-b99b-df9b14318946
 begin
@@ -1935,7 +1900,7 @@ version = "1.4.1+0"
 
 # ╔═╡ Cell order:
 # ╟─8d0e2589-8c84-44dc-9fa6-b29dcda7d48d
-# ╟─0584d086-883d-49bf-b1e3-b01e0ba33a12
+# ╠═0584d086-883d-49bf-b1e3-b01e0ba33a12
 # ╟─ef94f757-622a-45b5-89cb-d140e54135a4
 # ╟─809138b2-9c88-4805-9ae1-dd0e0b85dbdf
 # ╟─79906dea-0c06-4845-9f14-fbf10b846ed3
@@ -1960,9 +1925,8 @@ version = "1.4.1+0"
 # ╟─cd97fda8-984e-4f80-8e91-2ca434321386
 # ╠═cb2f8407-c2a5-4b51-8036-5ea9094b467f
 # ╠═d0c7bd76-ae05-48ad-a76b-ecf2737143da
+# ╠═5a1f1db0-bc13-4e3b-ac5a-ba63b71b5ba3
 # ╠═4f1000dd-0e52-40bc-8d75-b2015e3e6198
-# ╟─f4e26142-53ae-4873-9c70-41e4df1851c5
-# ╠═bb252b8f-aa11-4567-8f09-fd6c9e6f76ff
 # ╠═a7751416-34d8-4cf5-a229-78a3a074c6c1
 # ╠═86314c50-e636-4ee9-85f8-d52106ff4fdf
 # ╟─00000000-0000-0000-0000-000000000001
